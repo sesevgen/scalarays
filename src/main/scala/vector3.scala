@@ -1,7 +1,3 @@
-
-
-package scala
-
 case class vector3 (x: Double, y: Double, z: Double)  {
   def + (that: vector3): vector3 = vector3(x + that.x, y + that.y, z + that.z)
   def - (that: vector3): vector3 = vector3(x - that.x, y - that.y, z - that.z)
@@ -15,4 +11,6 @@ case class vector3 (x: Double, y: Double, z: Double)  {
                                                x * that.y - y * that.x)
                                                
   override def toString = "("+x+","+y+","+z+")"
+ 
 }
+
