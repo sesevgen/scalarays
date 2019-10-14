@@ -1,5 +1,6 @@
 
 
+
 object testVector3 extends App {
   val a = vector3(1,2,3)
   val b = vector3(4,5,6)
