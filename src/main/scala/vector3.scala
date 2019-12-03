@@ -1,6 +1,9 @@
 case class vector3 (x: Double, y: Double, z: Double)  {
   def + (that: vector3): vector3 = vector3(x + that.x, y + that.y, z + that.z)
   def - (that: vector3): vector3 = vector3(x - that.x, y - that.y, z - that.z)
+  def * (that: vector3): vector3 = vector3(x * that.x, y * that.y, z * that.z)
+  def * (that: Double): vector3 = vector3(that*x, that*y, that*z)
+  def / (that: Double) = this * (1 / that)
   
   def unary_- : vector3 = vector3(-x, -y, -z)
   
