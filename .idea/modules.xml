@@ -2,7 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/scalarays.iml" filepath="$PROJECT_DIR$/scalarays.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/scalarays.iml" filepath="$PROJECT_DIR$/.idea/modules/scalarays.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/scalarays-build.iml" filepath="$PROJECT_DIR$/.idea/modules/scalarays-build.iml" />
     </modules>
   </component>
 </project>
