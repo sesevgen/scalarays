@@ -1,8 +1,8 @@
 import org.scalatest.FlatSpec
 
 class Vector3Test extends FlatSpec {
-  val a = vector3(1,2,3)
-  val b = vector3(4,5,6)
+  val a: vector3 = vector3(1,2,3)
+  val b: vector3 = vector3(4,5,6)
 
   "Two vectors" should "add" in {
     assert(a + b == vector3(5, 7, 9))
@@ -17,7 +17,7 @@ class Vector3Test extends FlatSpec {
   }
 
   "Two vectors" should "element-wise divide" in {
-    assert(a / b == vector3(1.0/4, 2.0/5, 3.0/6))
+    assert(a / b == vector3(1.0f/4, 2.0f/5, 3.0f/6))
   }
 
   "A scalar" should "multiply a vector" in {
@@ -25,11 +25,11 @@ class Vector3Test extends FlatSpec {
   }
 
   "A scalar" should "divide a vector" in {
-    assert(a / 2 == vector3(1.0/2, 2.0/2, 3.0/2))
+    assert(a / 2 == vector3(1.0f/2, 2.0f/2, 3.0f/2))
   }
 
   "A vector" should "have a length" in {
-    assert(a.length == scala.math.sqrt(scala.math.pow(1,2) + scala.math.pow(2,2) + scala.math.pow(3,2)))
+    assert(a.length == scala.math.sqrt(scala.math.pow(1,2) + scala.math.pow(2,2) + scala.math.pow(3,2)).toFloat)
   }
 
   "Vector" should "flip signs" in {
