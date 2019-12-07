@@ -43,34 +43,35 @@ object Main extends App {
     vector3(1.0, 1.0, 1.0) * (1.0-t) + vector3(0.5, 0.7, 1.0) * t
   }
 
-  val writer = new PrintWriter(new File("Test2.ppm"))
   val nx = 200
   val ny = 100
 
-  writer.write("P3\n" + nx + " " + ny + "\n255\n")
   val lower_left_corner = vector3(-2.0, -1.0, -1.0)
   val horizontal = vector3(4.0, 0.0, 0.0)
   val vertical = vector3(0.0, 2.0, 0.0)
   val origin = vector3(0.0, 0.0, 0.0)
 
-  // Non functional for now, until I know what I'm doing better
   val yrange = List.range(ny-1, -1, -1)
   val xrange = List.range(0, nx, 1)
-  println(yrange)
-  println(xrange)
-  for(j <- yrange){
-    for(i <- xrange){
-      val u : Float = i.toFloat / nx.toFloat
-      val v : Float = j.toFloat / ny.toFloat
-      val r = ray(origin, lower_left_corner + horizontal * u + vertical * v)
-      val col = sky_color(r)
-      val ir : Int = (255.99 * col.x).toInt
-      val ig : Int = (255.99 * col.y).toInt
-      val ib : Int = (255.99 * col.z).toInt
 
-      writer.write(ir + " " + ig + " " + ib + "\n")
-    }
+  //val pixels = yrange flatMap(x => xrange map (y => (x,y)))
+  //val adjustedPixels = pixels.map { case (y, x) => (y.toFloat/ny, x.toFloat/nx) }
+
+  def processPixel(y: Int, x: Int) : String = {
+    val u : Float = x.toFloat / nx.toFloat
+    val v : Float = y.toFloat / ny.toFloat
+    val r = ray(origin, lower_left_corner + horizontal * u + vertical * v)
+    val col = sky_color(r)
+    (col * 255.99).intPrint
   }
+
+  val writer = new PrintWriter(new File("Test2.ppm"))
+  writer.write("P3\n" + nx + " " + ny + "\n255\n")
+  for {
+    y <- yrange
+    x <- xrange
+  }
+    yield writer.write(processPixel(y, x))
   writer.close()
 }
 

@@ -22,8 +22,9 @@ case class vector3 (x: Double, y: Double, z: Double)  {
   def cross (that: vector3): vector3 = vector3(y * that.z - z * that.y,
                                                z * that.x - x * that.z,
                                                x * that.y - y * that.x)
+  def intPrint : String = x.toInt+" "+y.toInt+" "+z.toInt+"\n"
                                                
-  override def toString = "("+x+","+y+","+z+")"
+  override def toString: String = x+" "+y+" "+z+"\n"
  
 }
 
