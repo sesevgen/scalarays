@@ -1,6 +1,10 @@
+import scala.annotation.tailrec
+
 abstract class Materialtype {
   val albedo: Vector3
-  def random_in_scale_sphere(scale: Float) : Vector3 = {
+
+  @tailrec
+  final def random_in_scale_sphere(scale: Float) : Vector3 = {
     val rand = scala.util.Random
     val randvec = Vector3(rand.nextFloat()-0.5f, rand.nextFloat()-0.5f, rand.nextFloat()-0.5f)*2.0f*scale
     if (randvec.squared_length < scale)
@@ -32,7 +36,7 @@ case class Dielectric (albedo: Vector3, r_idx: Float, diffuse: Float) extends Ma
 
   def schlick(cosine: Float, ref_idx: Float): Float = {
     val r0 = scala.math.pow((1 - ref_idx) / (1 + ref_idx), 2)
-    (r0 + (1 - r0) * scala.math.pow((1 - cosine), 5)).toFloat
+    (r0 + (1 - r0) * scala.math.pow(1 - cosine, 5)).toFloat
   }
 
   def nidx_ratio_cosine(r_in: Ray, normal: Vector3): (Boolean, Float, Float) = {
@@ -44,31 +48,36 @@ case class Dielectric (albedo: Vector3, r_idx: Float, diffuse: Float) extends Ma
     }
   }
 
-  def refract(internal: Boolean, v: Vector3, normal: Vector3, nidx_ratio: Float): (Boolean, Vector3) = {
+  def refract(internal: Boolean, v: Vector3, normal: Vector3, nidx_ratio: Float): Option[Vector3] = {
     val n = if (internal) normal else -normal
     val uv = v.normalized
     val dt = uv dot n
     val discriminant = 1.0f - nidx_ratio * nidx_ratio * (1 - dt * dt)
     if (discriminant > 0) {
-      (true, (uv - n * dt) * nidx_ratio - n * scala.math.sqrt(discriminant).toFloat)
+      Some((uv - n * dt) * nidx_ratio - n * scala.math.sqrt(discriminant).toFloat)
     }
     else {
-      (false, Vector3(0, 0, 0))
+      None
     }
   }
 
   def scatter(r_in: Ray, contact: Vector3, normal: Vector3): Ray = {
     val (internal, nidx_ratio, cosine) = nidx_ratio_cosine(r_in, normal)
-    val (refracted, refraction) = refract(internal, r_in.direction.normalized, normal, nidx_ratio)
+    val refraction = refract(internal, r_in.direction.normalized, normal, nidx_ratio)
 
-    val reflect_prob = if (refracted) schlick(cosine, r_idx) else 1.0f
-
-    if (scala.util.Random.nextFloat() < reflect_prob) {
-      val target = reflect(r_in.direction.normalized, normal) + random_in_scale_sphere(diffuse)
-      Ray(contact, target)
-    }
-    else {
-      Ray(contact, refraction)
+    refraction match {
+      case Some(i) => {
+        val reflect_prob = schlick(cosine, r_idx)
+        if (scala.util.Random.nextFloat() < reflect_prob) {
+          val target = reflect(r_in.direction.normalized, normal) + random_in_scale_sphere(diffuse)
+          Ray(contact, target)
+        }
+        else Ray(contact, i)
+      }
+      case None => {
+        val target = reflect(r_in.direction.normalized, normal) + random_in_scale_sphere(diffuse)
+        Ray(contact, target)
+      }
     }
   }
 }

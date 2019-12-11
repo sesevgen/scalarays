@@ -29,8 +29,8 @@ case class Vector3(x: Float, y: Float, z: Float)  {
     scala.math.pow(x,exponent).toFloat,
     scala.math.pow(y, exponent).toFloat,
     scala.math.pow(z, exponent).toFloat)
-                                               
+
   override def toString: String = x+" "+y+" "+z+"\n"
- 
+
 }
 
