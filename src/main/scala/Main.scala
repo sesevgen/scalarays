@@ -1,11 +1,9 @@
 import java.io.File
 import java.io.PrintWriter
+import java.util.concurrent.{ArrayBlockingQueue, ThreadPoolExecutor, TimeUnit}
 
 import scala.annotation.tailrec
-import scala.collection.parallel.immutable.ParVector
-import scala.math.sqrt
-import scala.util.Random
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -18,14 +16,13 @@ object Main extends App {
   def sky_color(r: Ray): Vector3 = {
     val unit_direction = r.direction.normalized
     val t: Float = 0.5f * (unit_direction.y + 1.0f)
-    Vector3(1.0f, 1.0f, 1.0f) * (1.0f - t) + Vector3(0.5f, 0.7f, 1.0f) * t
+    Vector3(1f, 1f, 1f) * (1.0f - t) + Vector3(0.5f, 0.7f, 1f) * t
   }
 
   @tailrec
   def color(r: Ray, objects: List[Hitable], depth: Int, max_depth: Int, current_albedo: Vector3): Vector3 = {
     val new_depth = depth + 1
-    if (new_depth > max_depth) return Vector3(0f, 0f, 0f)
-    //val results = objects.map(_.intersect(r, tmin, tmax)) filter (_._1 > tmin) sortBy (_._1)
+    if (new_depth == max_depth) return Vector3(0f, 0f, 0f)
     val results = objects.flatMap(_.intersect(r, tmin, tmax)) sortBy(_._1)
     results match {
       case Nil => current_albedo * sky_color(r)
@@ -33,18 +30,13 @@ object Main extends App {
     }
   }
 
-  def process_location(u: Float, v: Float, canvas: Canvas, camera: Camera, objects: List[Hitable], max_depth: Int): Vector3 = {
-    val r = camera.get_ray(u, v)
-    color(r, objects, depth = 0, max_depth, Vector3(1,1,1))
-  }
-
-  def process_with_subsample(x: Int, y: Int,
+  @tailrec
+  def process_with_subsample(x: Int, y: Int, rand: scala.util.Random,
                              canvas: Canvas, camera: Camera, objects: List[Hitable],
-                             samples: Int, max_depth: Int): Vector3 = {
-    val rand = scala.util.Random
-    val subsample_locs: Vector[(Float, Float)] = Vector.tabulate(samples)(_ =>
-      ((x + rand.nextFloat()) / canvas.nx.toFloat, (y + rand.nextFloat()) / canvas.ny.toFloat))
-    subsample_locs.map(x => process_location(x._1, x._2, canvas, camera, objects, max_depth)).reduceLeft(_ + _) / samples.toFloat
+                             samples: Int, max_depth: Int, sample: Int, accumulated: Vector3): Vector3 = {
+    val new_accumulated = accumulated + color(camera.get_ray((x + rand.nextFloat()) / canvas.nx.toFloat, (y + rand.nextFloat())/ canvas.ny.toFloat), objects, depth = 1, max_depth, Vector3(1,1,1))
+    if (sample == samples) new_accumulated/samples
+    else process_with_subsample(x, y, rand, canvas, camera, objects, samples, max_depth, sample+1, new_accumulated)
   }
 
   def draw(canvas: Canvas,
@@ -54,22 +46,22 @@ object Main extends App {
            max_depth: Int): Array[Future[Vector3]] = {
     val yrange = Array.range(canvas.ny - 1, -1, -1)
     val xrange = Array.range(0, canvas.nx, 1)
+    val rand = scala.util.Random
     for {
       y <- yrange
       x <- xrange
     }
       yield Future {
         process_with_subsample(
-          x, y,
+          x, y, rand,
           canvas, camera, objects,
-          subsampling, max_depth)
+          subsampling, max_depth, sample = 1 , Vector3(0,0,0))
       }
   }
 
 
-
   // Canvas
-  val (ny, nx) = (600, 400)
+  val (ny, nx) = (512, 216)
 
   // Camera
   val lookfrom = Vector3(14f, 2f, 4f)
@@ -84,7 +76,6 @@ object Main extends App {
   val gamma_corr = 0.5
   val bit_depth = 255.99f
 
-
   val canvas = Canvas(ny, nx)
   val camera = Camera(lookfrom, lookat, Vector3(0f, 1f, 0f), vfov, ny.toFloat/nx.toFloat, aperture, dist_to_focus)
 
@@ -94,14 +85,14 @@ object Main extends App {
     val center = Vector3(a+0.9f*rand.nextFloat(), 0.2f, b + 0.9f*rand.nextFloat())
     if ((center - Vector3(4f, 0.2f, 0f)).length > 0.9f)
       {
-        if (choose_mat < 0.75)
+        if (choose_mat < 0.70)
           {
             Some( Sphere(center, 0.2f, Lambertian(
               Vector3(rand.nextFloat()*rand.nextFloat(),
                       rand.nextFloat()*rand.nextFloat(),
                       rand.nextFloat()*rand.nextFloat()))) )
           }
-        else if (choose_mat < 0.9)
+        else if (choose_mat < 0.85)
           {
             Some( Sphere(center, 0.2f, Metal(
               Vector3(0.5f*(1+rand.nextFloat()),
@@ -110,7 +101,7 @@ object Main extends App {
           }
         else
           {
-            Some( Sphere(center, 0.2f, Dielectric(Vector3(1.0f, 1.0f, 1.0f), 1.5f, 0.01f)) )
+            Some( Sphere(center, 0.2f, Dielectric(Vector3(1.0f, 1.0f, 1.0f), 1.5f, rand.nextFloat()*0.1f)) )
           }
       }
     else None
@@ -134,12 +125,27 @@ object Main extends App {
   val rand_objects = objmap.flatMap( coord => random_obj(coord._1, coord._2) )
   val other_objects = List(
     Sphere(Vector3(0f, -1000f, 0f), 1000f, Lambertian(Vector3(0.5f, 0.5f, 0.5f))),
-    Sphere(Vector3(0f, 1f, 0f), 1f, Dielectric(Vector3(1f, 1f, 1f), 1.5f, 0.01f)),
+    Sphere(Vector3(0f, 1f, 0f), 1f, Dielectric(Vector3(1f, 1f, 1f), 1.5f, 0.0001f)),
     Sphere(Vector3(-4f, 1f, 0f), 1f, Lambertian(Vector3(0.4f, 0.2f, 0.1f))),
-    Sphere(Vector3(4f, 1f, 0f), 1f, Metal(Vector3(0.7f, 0.6f, 0.5f), 0.01f)),
+    Sphere(Vector3(4f, 1f, 0f), 1f, Metal(Vector3(0.7f, 0.6f, 0.5f), 0.0001f)),
   )
 
   val objects = rand_objects ++ other_objects
+
+  val numWorkers = sys.runtime.availableProcessors
+  val queueCapacity = 100
+  implicit val ec = ExecutionContext.fromExecutorService(
+    new ThreadPoolExecutor(
+      numWorkers, numWorkers,
+      0L, TimeUnit.SECONDS,
+      new ArrayBlockingQueue[Runnable](queueCapacity) {
+        override def offer(e: Runnable) = {
+          put(e); // may block if waiting for empty room
+          true
+        }
+      }
+    )
+  )
 
   val t1 = System.nanoTime()
   println("trial" + objects)

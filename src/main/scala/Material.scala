@@ -64,7 +64,6 @@ case class Dielectric (albedo: Vector3, r_idx: Float, diffuse: Float) extends Ma
   def scatter(r_in: Ray, contact: Vector3, normal: Vector3): Ray = {
     val (internal, nidx_ratio, cosine) = nidx_ratio_cosine(r_in, normal)
     val refraction = refract(internal, r_in.direction.normalized, normal, nidx_ratio)
-
     refraction match {
       case Some(i) => {
         val reflect_prob = schlick(cosine, r_idx)
